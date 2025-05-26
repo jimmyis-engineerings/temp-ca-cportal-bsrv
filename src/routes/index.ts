@@ -1,17 +1,17 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import test from './test'
-import account from './account'
+import auth from './auth'
 
 // TODO: Making this to be a configurable list
 const enabledRoutes: string[] = [
     "test",
-    "account"
+    "auth"
 ]
 
 const apiRoutes: { [key: string]: Hono } = {
     test,
-    account
+    auth
 }
 
 const api = new Hono()
