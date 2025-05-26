@@ -1,7 +1,16 @@
 {
   "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
+    "esModuleInterop": true,
     "strict": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["vitest/globals", "bun-types"],
+    "baseUrl": ".", // This is important
+    "paths": {
+      "@/*": ["src/*"]
+    },
   }
 }
