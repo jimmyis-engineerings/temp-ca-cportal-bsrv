@@ -5,6 +5,8 @@ import { initializeDatabase } from './db/init'
 (async () => {
   try {
     console.log('Initializing database...');
+    console.log(process.env);
+    
     await initializeDatabase();
     console.log('Database initialization complete');
   } catch (error) {
