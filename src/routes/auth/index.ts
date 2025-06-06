@@ -9,6 +9,7 @@ export default new Hono()
   .post('/signin', signin)
   .get('/signout', signout)
   .get('/session', session)
+  .post('/oauth/google/callback', oAuthGoogleCallback)
 
 async function get(c: Context) {
     // const result = await authService.get()
@@ -55,6 +56,15 @@ async function signout(c: Context) {
 
     // return c.json({ result: { success: true } })
     return c.json({ result })
+}
+
+async function oAuthGoogleCallback(c: Context) {
+
+    // c.header('Content-Type', 'application/json');
+    const body = await c.req.json()
+    console.log("Google Auth Callback Body:", body)
+
+    return c.json({ result: "TEST" })
 }
 
 async function session(c: Context) {
