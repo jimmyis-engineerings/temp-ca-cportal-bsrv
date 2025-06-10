@@ -97,7 +97,8 @@ async function oAuthGoogleCallback(c: Context) {
         access_type: 'offline',
         //** Pass in the scopes array defined above.
         //    * Alternatively, if only one scope is needed, you can pass a scope URL as a string 
-        scope: scopes,
+        response_type: 'code',
+        // scope: scopes,
         // Enable incremental authorization. Recommended as a best practice.
         include_granted_scopes: true,
         // Include the state parameter to reduce the risk of CSRF attacks.
@@ -122,6 +123,11 @@ async function oAuthGoogleCallback(c: Context) {
         }) 
     } catch (error: any) {
         console.log("Error during OAuth callback:", error);
+        console.log("Error details:", {
+            message: error.message,
+            code: error.code,
+            description: error.description,
+        })
 
         return c.json({
             result: {
