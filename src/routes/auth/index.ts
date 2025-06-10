@@ -68,7 +68,7 @@ async function oAuthGoogleCallback(c: Context) {
     // c.header('Content-Type', 'application/json');
     const body = await c.req.json()
     // console.log("Google Auth Callback Body:", body)
-    console.log({ oauthConfig })
+    console.log({ oauthConfig, body })
 
     const { googleOAuth2 } = oauthConfig;
 
@@ -78,6 +78,7 @@ async function oAuthGoogleCallback(c: Context) {
         googleOAuth2.redirectUrl
     );
 
+    /*  
     const scopes = [
         body.scope,
         // 'https://www.googleapis.com/auth/drive.metadata.readonly',
@@ -94,8 +95,8 @@ async function oAuthGoogleCallback(c: Context) {
     const authorizationUrl = oauth2Client.generateAuthUrl({
         // 'online' (default) or 'offline' (gets refresh_token)
         access_type: 'offline',
-        /** Pass in the scopes array defined above.
-            * Alternatively, if only one scope is needed, you can pass a scope URL as a string */
+        //** Pass in the scopes array defined above.
+        //    * Alternatively, if only one scope is needed, you can pass a scope URL as a string 
         scope: scopes,
         // Enable incremental authorization. Recommended as a best practice.
         include_granted_scopes: true,
@@ -106,7 +107,32 @@ async function oAuthGoogleCallback(c: Context) {
     return c.json({ result: {
         state: state,
         authorizationUrl
-    } })
+    } }) 
+    */
+   // Receive the callback from Google's OAuth 2.0 server.
+
+    try {
+        let { tokens } = await oauth2Client.getToken(body.code);
+        oauth2Client.setCredentials(tokens);
+    
+        return c.json({ 
+            result: {
+                tokens
+            } 
+        }) 
+    } catch (error: any) {
+        console.log("Error during OAuth callback:", error);
+
+        return c.json({
+            result: {
+                success: false,
+                error: {
+                    message: error.message || "Unknown error during OAuth callback"
+                }
+            }
+        })
+    }
+
 }
 
 async function session(c: Context) {
