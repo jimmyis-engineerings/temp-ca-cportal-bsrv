@@ -7,6 +7,13 @@ import * as authService from '@/services/auth'
 import { authUtil, errorUtil } from '@/shared/utils';
 import { oauthConfig } from '@/configs';
 
+const { googleOAuth2 } = oauthConfig;
+const oauth2ClientOptions = oauthConfig.googleOAuth2;
+const oauth2Client = new google.auth.OAuth2(
+    oauth2ClientOptions
+);
+
+
 export default new Hono()
   .get('/', get)
   .post('/signup', signup)
@@ -65,12 +72,6 @@ async function signout(c: Context) {
 
 
 async function oAuthGoogle(c: Context) {
-    const { googleOAuth2 } = oauthConfig;
-    const oauth2ClientOptions = oauthConfig.googleOAuth2;
-    const oauth2Client = new google.auth.OAuth2(
-        oauth2ClientOptions
-    );
-
     const scopes = [
         'https://www.googleapis.com/auth/userinfo.profile',
         'https://www.googleapis.com/auth/userinfo.email',
@@ -117,29 +118,37 @@ async function oAuthGoogleCallback(c: Context) {
     // console.log("Google Auth Callback Body:", body)
     console.log({ oauthConfig, body })
 
-    const { googleOAuth2 } = oauthConfig;
+    // const { googleOAuth2 } = oauthConfig;
 
-    const oauth2ClientOptions = {
-        // clientId: "",
-        // clientSecret: "",
-        // redirectUri: "",
-        // endpoints: Partial<OAuth2ClientEndpoints>, // Customized endpoints
-        // issuers: string[], // The allowed OAuth2 token issuers.
-        ...googleOAuth2,
-    }
+    // const oauth2ClientOptions = {
+    //     // clientId: "",
+    //     // clientSecret: "",
+    //     // redirectUri: "",
+    //     // endpoints: Partial<OAuth2ClientEndpoints>, // Customized endpoints
+    //     // issuers: string[], // The allowed OAuth2 token issuers.
+    //     ...googleOAuth2
+    // }
 
-    const oauth2Client = new google.auth.OAuth2(
-        oauth2ClientOptions
-    );
+    // const oauth2Client = new google.auth.OAuth2(
+    //     oauth2ClientOptions
+    // );
+
+    console.log("OAuth2 Client Options:", oauth2ClientOptions);
+    console.log("OAuth2 Client:", oauth2Client);
 
     try {
-        let { tokens } = await oauth2Client.getToken(body.code);
-        oauth2Client.setCredentials(tokens);
+        const result = await oauth2Client.getToken({
+            code: body.code,
+            client_id: googleOAuth2.clientId,
+            redirect_uri: googleOAuth2.redirectUri,
+        });
+
+        console.log("OAuth2 Auth Code exchange result:", result);
+
+        oauth2Client.setCredentials(result.tokens);
     
         return c.json({ 
-            result: {
-                tokens
-            } 
+            result
         }) 
     } catch (error: any) {
         console.log("Error during OAuth callback:", error);
