@@ -13,6 +13,7 @@ export default new Hono()
   .post('/signin', signin)
   .get('/signout', signout)
   .get('/session', session)
+  .get('/oauth/google', oAuthGoogle)
   .post('/oauth/google/callback', oAuthGoogleCallback)
 
 async function get(c: Context) {
@@ -63,13 +64,7 @@ async function signout(c: Context) {
 }
 
 
-async function oAuthGoogleCallback(c: Context) {
-
-    // c.header('Content-Type', 'application/json');
-    const body = await c.req.json()
-    // console.log("Google Auth Callback Body:", body)
-    console.log({ oauthConfig, body })
-
+async function oAuthGoogle(c: Context) {
     const { googleOAuth2 } = oauthConfig;
 
     const oauth2Client = new google.auth.OAuth2(
@@ -78,9 +73,9 @@ async function oAuthGoogleCallback(c: Context) {
         googleOAuth2.redirectUrl
     );
 
-    /*  
     const scopes = [
-        body.scope,
+        'https://www.googleapis.com/auth/userinfo.profile',
+        'https://www.googleapis.com/auth/userinfo.email',
         // 'https://www.googleapis.com/auth/drive.metadata.readonly',
         // 'https://www.googleapis.com/auth/calendar.readonly'
     ];
@@ -98,19 +93,39 @@ async function oAuthGoogleCallback(c: Context) {
         //** Pass in the scopes array defined above.
         //    * Alternatively, if only one scope is needed, you can pass a scope URL as a string 
         response_type: 'code',
-        // scope: scopes,
+        scope: scopes,
         // Enable incremental authorization. Recommended as a best practice.
         include_granted_scopes: true,
         // Include the state parameter to reduce the risk of CSRF attacks.
-        state: state
+        state: state,
+        ux_mode: 'popup', // Use 'popup' for a popup window, or 'redirect' for a full redirect
+    
+        // redirect_uri: googleOAuth2.redirectUrl,
     });
+
 
     return c.json({ result: {
         state: state,
         authorizationUrl
     } }) 
-    */
+   
    // Receive the callback from Google's OAuth 2.0 server.
+}
+
+async function oAuthGoogleCallback(c: Context) {
+
+    // c.header('Content-Type', 'application/json');
+    const body = await c.req.json()
+    // console.log("Google Auth Callback Body:", body)
+    console.log({ oauthConfig, body })
+
+    const { googleOAuth2 } = oauthConfig;
+
+    const oauth2Client = new google.auth.OAuth2(
+        googleOAuth2.clientId,
+        googleOAuth2.clientSecret,
+        googleOAuth2.redirectUrl
+    );
 
     try {
         let { tokens } = await oauth2Client.getToken(body.code);
