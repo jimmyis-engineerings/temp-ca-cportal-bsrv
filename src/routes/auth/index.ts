@@ -66,11 +66,9 @@ async function signout(c: Context) {
 
 async function oAuthGoogle(c: Context) {
     const { googleOAuth2 } = oauthConfig;
-
+    const oauth2ClientOptions = oauthConfig.googleOAuth2;
     const oauth2Client = new google.auth.OAuth2(
-        googleOAuth2.clientId,
-        googleOAuth2.clientSecret,
-        googleOAuth2.redirectUrl
+        oauth2ClientOptions
     );
 
     const scopes = [
@@ -101,7 +99,7 @@ async function oAuthGoogle(c: Context) {
         state: state,
         ux_mode: 'popup', // Use 'popup' for a popup window, or 'redirect' for a full redirect
     
-        redirect_uri: googleOAuth2.redirectUrl,
+        redirect_uri: googleOAuth2.redirectUri,
     });
 
     return c.json({ result: {
@@ -121,10 +119,17 @@ async function oAuthGoogleCallback(c: Context) {
 
     const { googleOAuth2 } = oauthConfig;
 
+    const oauth2ClientOptions = {
+        // clientId: "",
+        // clientSecret: "",
+        // redirectUri: "",
+        // endpoints: Partial<OAuth2ClientEndpoints>, // Customized endpoints
+        // issuers: string[], // The allowed OAuth2 token issuers.
+        ...googleOAuth2,
+    }
+
     const oauth2Client = new google.auth.OAuth2(
-        googleOAuth2.clientId,
-        googleOAuth2.clientSecret,
-        googleOAuth2.redirectUrl
+        oauth2ClientOptions
     );
 
     try {
