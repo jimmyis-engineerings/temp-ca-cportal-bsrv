@@ -79,7 +79,7 @@ async function oAuthGoogleCallback(c: Context) {
     );
 
     const scopes = [
-        ...body.scopes || [],
+        body.scope,
         // 'https://www.googleapis.com/auth/drive.metadata.readonly',
         // 'https://www.googleapis.com/auth/calendar.readonly'
     ];
