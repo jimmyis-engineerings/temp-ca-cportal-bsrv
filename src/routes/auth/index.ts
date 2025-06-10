@@ -90,6 +90,7 @@ async function oAuthGoogle(c: Context) {
     const authorizationUrl = oauth2Client.generateAuthUrl({
         // 'online' (default) or 'offline' (gets refresh_token)
         access_type: 'offline',
+        prompt: 'consent', // Prompt the user for consent every time
         //** Pass in the scopes array defined above.
         //    * Alternatively, if only one scope is needed, you can pass a scope URL as a string 
         response_type: 'code',
@@ -100,9 +101,8 @@ async function oAuthGoogle(c: Context) {
         state: state,
         ux_mode: 'popup', // Use 'popup' for a popup window, or 'redirect' for a full redirect
     
-        // redirect_uri: googleOAuth2.redirectUrl,
+        redirect_uri: googleOAuth2.redirectUrl,
     });
-
 
     return c.json({ result: {
         state: state,
