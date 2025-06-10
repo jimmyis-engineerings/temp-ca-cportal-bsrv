@@ -1,7 +1,11 @@
 import { Hono, Context } from 'hono'
+import {google} from 'googleapis';
+import crypto from 'crypto';
+
 import * as authService from '@/services/auth'
 
 import { authUtil, errorUtil } from '@/shared/utils';
+import { oauthConfig } from '@/configs';
 
 export default new Hono()
   .get('/', get)
@@ -58,13 +62,51 @@ async function signout(c: Context) {
     return c.json({ result })
 }
 
+
 async function oAuthGoogleCallback(c: Context) {
 
     // c.header('Content-Type', 'application/json');
     const body = await c.req.json()
-    console.log("Google Auth Callback Body:", body)
+    // console.log("Google Auth Callback Body:", body)
+    console.log({ oauthConfig })
 
-    return c.json({ result: "TEST" })
+    const { googleOAuth2 } = oauthConfig;
+
+    const oauth2Client = new google.auth.OAuth2(
+        googleOAuth2.clientId,
+        googleOAuth2.clientSecret,
+        googleOAuth2.redirectUrl
+    );
+
+    const scopes = [
+        ...body.scopes || [],
+        // 'https://www.googleapis.com/auth/drive.metadata.readonly',
+        // 'https://www.googleapis.com/auth/calendar.readonly'
+    ];
+
+    // Generate a secure random state value.
+    const state = crypto.randomBytes(32).toString('hex');
+
+    // Store state in the session
+    // req.session.state = state;
+
+    // Generate a url that asks permissions for the Drive activity and Google Calendar scope
+    const authorizationUrl = oauth2Client.generateAuthUrl({
+        // 'online' (default) or 'offline' (gets refresh_token)
+        access_type: 'offline',
+        /** Pass in the scopes array defined above.
+            * Alternatively, if only one scope is needed, you can pass a scope URL as a string */
+        scope: scopes,
+        // Enable incremental authorization. Recommended as a best practice.
+        include_granted_scopes: true,
+        // Include the state parameter to reduce the risk of CSRF attacks.
+        state: state
+    });
+
+    return c.json({ result: {
+        state: state,
+        authorizationUrl
+    } })
 }
 
 async function session(c: Context) {
