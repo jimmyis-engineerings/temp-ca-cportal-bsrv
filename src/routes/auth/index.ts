@@ -112,63 +112,19 @@ async function oAuthGoogle(c: Context) {
 }
 
 async function oAuthGoogleCallback(c: Context) {
-
-    // c.header('Content-Type', 'application/json');
     const body = await c.req.json()
-    // console.log("Google Auth Callback Body:", body)
-    console.log({ oauthConfig, body })
-
-    // const { googleOAuth2 } = oauthConfig;
-
-    // const oauth2ClientOptions = {
-    //     // clientId: "",
-    //     // clientSecret: "",
-    //     // redirectUri: "",
-    //     // endpoints: Partial<OAuth2ClientEndpoints>, // Customized endpoints
-    //     // issuers: string[], // The allowed OAuth2 token issuers.
-    //     ...googleOAuth2
-    // }
-
-    // const oauth2Client = new google.auth.OAuth2(
-    //     oauth2ClientOptions
-    // );
-
-    console.log("OAuth2 Client Options:", oauth2ClientOptions);
-    console.log("OAuth2 Client:", oauth2Client);
+    // console.log("OAuth2 Client Options:", oauth2ClientOptions);
+    // console.log("OAuth2 Client:", oauth2Client);
 
     try {
-        // const result = await oauth2Client.getToken({
-        //     code: body.code,
-        //     client_id: googleOAuth2.clientId,
-        //     redirect_uri: googleOAuth2.redirectUri,
-        // });
-        const url = "https://oauth2.googleapis.com/token";
-        const method = "POST";
-        const payload = {
-            code: String(body.code ?? ""),
-            client_id: oauth2ClientOptions.clientId ?? "",
-            client_secret: oauth2ClientOptions.clientSecret ?? "",
-            redirect_uri: oauth2ClientOptions.redirectUri ?? "",
-            grant_type: "authorization_code"
-        }
-        const formBody = new URLSearchParams(payload).toString();
+        const tokens = await googleOAuth2TokenExchange(body.code);
 
-        const response = await fetch(url, {
-			method,
-			headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formBody,
-		});
+        console.log("OAuth2 Auth Code exchange result:", { tokens });
 
-        const result = await response.json();
-
-        console.log("OAuth2 Auth Code exchange result:", result);
-
-        // oauth2Client.setCredentials(result.tokens);
+        oauth2Client.setCredentials(tokens);
     
         return c.json({ 
-            result
+            result: tokens
         }) 
     } catch (error: any) {
         console.log("Error during OAuth callback:", error);
@@ -242,3 +198,39 @@ async function session(c: Context) {
 // async function reflect(data: any) {
 //   return { ...data, api: 'ACCOUNT/REFLECT', timestamp: Date.now() }
 // }
+
+
+// Services
+async function googleOAuth2TokenExchange(code: string) {
+    try {
+        if (!code) {
+            throw new Error("Authorization code is required for token exchange.");
+        }
+
+        const url = "https://oauth2.googleapis.com/token";
+        const method = "POST";
+        const payload = {
+            code,
+            client_id: oauth2ClientOptions.clientId ?? "",
+            client_secret: oauth2ClientOptions.clientSecret ?? "",
+            redirect_uri: oauth2ClientOptions.redirectUri ?? "",
+            grant_type: "authorization_code"
+        }
+        const formBody = new URLSearchParams(payload).toString();
+
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formBody,
+        });
+
+        return response.json();
+
+    } catch (error: any) {
+        console.error("Error during Google OAuth2 token exchange:", error);
+
+        throw new Error(error.message || "Unknown error during OAuth2 token exchange");
+    }
+}
