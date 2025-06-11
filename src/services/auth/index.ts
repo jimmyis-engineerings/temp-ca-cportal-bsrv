@@ -297,7 +297,7 @@ export async function checkSession(
 //             requestFields
 //         )
 // }
-async function getUserAccount(
+export async function getUserAccount(
     username: string
 ) {
     // const makeAlias = authUtil.makeAliasForUserAccountColumn;

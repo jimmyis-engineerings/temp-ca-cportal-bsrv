@@ -136,12 +136,14 @@ async function oAuthGoogleCallback(c: Context) {
         oauth2Client.setCredentials(tokens);
     
         const isRefreshTokenExists = tokens.refresh_token && tokens.refresh_token.length > 0;
+        
         if (!isRefreshTokenExists) {
             throw new Error("Refresh token is missing in the response from Google OAuth2 token exchange. This may be due to the access_type not being set to 'offline' or the user not granting permission for offline access.");
         }
 
         // check if the token is valid
         const isAccessTokenExists = tokens.access_token && tokens.access_token.length > 0;
+
         if (!isAccessTokenExists) {
             // TODO: Use the refresh token to get a new access token
         }
@@ -153,9 +155,25 @@ async function oAuthGoogleCallback(c: Context) {
 
         // TODO: Store tokens (especially refresh token) securely in the database or session store.
 
+
         // TODO: User Existence: Check if the user exists in your database.
+        const existsUserAccount = await authService.getUserAccount(userProfile.email);
+        
+        console.log("User Account Existence Check:", { existsUserAccount });
+        
         // CASE #1: If not, send response for user to create a new user account with the info from OAuth.
             // TODO: Send response to the user to create a new account with the info from OAuth. (Opt-in to create a new account or link to an existing account)
+        if (!existsUserAccount) {
+            return c.json({
+                result: {
+                    success: true,
+                    tokens,
+                    userProfile,
+                    message: "User account does not exist. Please create a new account.",
+                    signal: "CREATE_NEW_ACCOUNT", // Signal to the client to create a new account
+                }
+            })
+        }
 
         // CASE #2: If the user exists, check to see if they have linked their account with the system.
             // CASE #2.1 : User has not linked their account with the system yet.
