@@ -119,12 +119,57 @@ async function oAuthGoogleCallback(c: Context) {
     try {
         const tokens = await googleOAuth2TokenExchange(body.code);
 
-        console.log("OAuth2 Auth Code exchange result:", { tokens });
+        // console.log("OAuth2 Auth Code exchange result:", { tokens });
+        // 
+        /* Sample of token response
+        tokens: {
+            id_token: string
+            access_token: string
+            refresh_token: string
+            token_type: "Bearer"
+            expires_in: number (3599)
+            scope: "https://www.googleapis.com/auth/userinfo.profile openid https://www.googleapis.com/auth/userinfo.email"
+        }
+        */
+        // If any error occurs during the token exchange, it will be caught in the catch block.
 
         oauth2Client.setCredentials(tokens);
     
-        return c.json({ 
-            result: tokens
+        const isRefreshTokenExists = tokens.refresh_token && tokens.refresh_token.length > 0;
+        if (!isRefreshTokenExists) {
+            throw new Error("Refresh token is missing in the response from Google OAuth2 token exchange. This may be due to the access_type not being set to 'offline' or the user not granting permission for offline access.");
+        }
+
+        // check if the token is valid
+        const isAccessTokenExists = tokens.access_token && tokens.access_token.length > 0;
+        if (!isAccessTokenExists) {
+            // TODO: Use the refresh token to get a new access token
+        }
+ 
+        // TODO: OAuth Info (Profile): Use access token to fetch user profile information
+        const userProfile = await getUserProfileOnGoogle(tokens.access_token);
+
+        console.log("User Profile from Google:", userProfile);
+
+        // TODO: Store tokens (especially refresh token) securely in the database or session store.
+
+        // TODO: User Existence: Check if the user exists in your database.
+        // CASE #1: If not, send response for user to create a new user account with the info from OAuth.
+            // TODO: Send response to the user to create a new account with the info from OAuth. (Opt-in to create a new account or link to an existing account)
+
+        // CASE #2: If the user exists, check to see if they have linked their account with the system.
+            // CASE #2.1 : User has not linked their account with the system yet.
+                // TODO: Send signal response to the user to link their account with the system. (Opt-in to link to an existing account)
+            // CASE #2.2 : User has linked their account with the system.
+                // TODO: Create a session for the user and return the session ID.
+
+
+        return c.json({
+            result: {
+                success: true,
+                tokens,
+                userProfile,
+            }
         }) 
     } catch (error: any) {
         console.log("Error during OAuth callback:", error);
@@ -232,5 +277,30 @@ async function googleOAuth2TokenExchange(code: string) {
         console.error("Error during Google OAuth2 token exchange:", error);
 
         throw new Error(error.message || "Unknown error during OAuth2 token exchange");
+    }
+}
+
+async function getUserProfileOnGoogle(access_token: string) {
+    try {
+        if (!access_token) {
+            throw new Error("Access token is required to fetch user profile.");
+        }
+
+        const url = "https://www.googleapis.com/oauth2/v2/userinfo";
+        const method = "GET";
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Authorization': `Bearer ${access_token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        return response.json();
+
+    } catch (error: any) {
+        console.error("Error on getting user profile:", error);
+
+        throw new Error(error.message || "Unknown error on getting user profile");
     }
 }
