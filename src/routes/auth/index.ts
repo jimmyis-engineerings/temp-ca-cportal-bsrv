@@ -137,15 +137,35 @@ async function oAuthGoogleCallback(c: Context) {
     console.log("OAuth2 Client:", oauth2Client);
 
     try {
-        const result = await oauth2Client.getToken({
-            code: body.code,
-            client_id: googleOAuth2.clientId,
-            redirect_uri: googleOAuth2.redirectUri,
-        });
+        // const result = await oauth2Client.getToken({
+        //     code: body.code,
+        //     client_id: googleOAuth2.clientId,
+        //     redirect_uri: googleOAuth2.redirectUri,
+        // });
+        const url = "https://oauth2.googleapis.com/token";
+        const method = "POST";
+        const payload = {
+            code: String(body.code ?? ""),
+            client_id: oauth2ClientOptions.clientId ?? "",
+            client_secret: oauth2ClientOptions.clientSecret ?? "",
+            redirect_uri: oauth2ClientOptions.redirectUri ?? "",
+            grant_type: "authorization_code"
+        }
+        const formBody = new URLSearchParams(payload).toString();
+
+        const response = await fetch(url, {
+			method,
+			headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formBody,
+		});
+
+        const result = await response.json();
 
         console.log("OAuth2 Auth Code exchange result:", result);
 
-        oauth2Client.setCredentials(result.tokens);
+        // oauth2Client.setCredentials(result.tokens);
     
         return c.json({ 
             result
