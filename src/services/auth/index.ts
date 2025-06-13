@@ -11,17 +11,22 @@ const SALT = "ABC"
 
 export async function signup(data: any) {
     try {
-        const { user } = data
 
         console.log("Signup data:", { data })
 
-        if (!authUtil.checkSignupInput(user)) {
+        if (!authUtil.checkSignupInput(data)) {
             return { success: false, error: { message: "Required inputs is missing" }}
         }
 
-        const { name, email, password: rawPassword } = user
-        const username = email
-        const signup_email = email
+        const { 
+            oauthRegistration,
+            includePassword,
+            firstname,
+            lastname,
+            email,
+            password,
+            organizationId
+        } = data
 
         const now = new Date()    
         const hash = hashUtil.createSHA256Hash([now, Math.random()])
@@ -29,10 +34,18 @@ export async function signup(data: any) {
         const created_epoch = now.getTime()
         // const created_at = convertDateTimetoISO8601(now)
         const updated_epoch = created_epoch
-        const password_hash = await authUtil.hashPassword(rawPassword)
+        const password_hash = oauthRegistration && !includePassword ? null :
+            await authUtil.hashPassword(password)
         
         const result = {
-            
+            ...data,
+            now,
+            hash,
+            id,
+            created_epoch,
+            updated_epoch,
+            password_hash,
+            success: true
         }
         // const result = await createUserAccountWithoutProfile(
         //     {
@@ -46,7 +59,7 @@ export async function signup(data: any) {
         //     name
         // )
 
-        return { success: result }
+        return { result }
 
     } catch (e: any) {
         console.error(e)

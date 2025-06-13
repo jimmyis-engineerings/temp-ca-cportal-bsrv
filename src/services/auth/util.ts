@@ -1,9 +1,20 @@
 // import * as bcrypt from "bcrypt";
 
-export function checkSignupInput({ name, email, password }: any) {
+export function checkSignupInput({
+    email,
+    password,
+    firstname,
+    lastname,
+    oauthRegistration,
+    includePassword
+}: any) {
     return email.length > 0
-        && password.length > 0
-        && name.length > 0
+        && (
+            (oauthRegistration && !includePassword) ||
+            password.length > 0
+        )
+        && firstname.length > 0
+        && lastname.length > 0
 }
 
 export function checkSigninInput({ email, password }: any) {
