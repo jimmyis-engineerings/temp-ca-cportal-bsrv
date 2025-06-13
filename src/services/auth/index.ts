@@ -13,6 +13,8 @@ export async function signup(data: any) {
     try {
         const { user } = data
 
+        console.log("Signup data:", { data })
+
         if (!authUtil.checkSignupInput(user)) {
             return { success: false, error: { message: "Required inputs is missing" }}
         }
