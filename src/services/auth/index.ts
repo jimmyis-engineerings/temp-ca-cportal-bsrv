@@ -37,29 +37,32 @@ export async function signup(data: any) {
         const password_hash = oauthRegistration && !includePassword ? null :
             await authUtil.hashPassword(password)
         
-        const result = {
-            ...data,
-            now,
-            hash,
-            id,
-            created_epoch,
-            updated_epoch,
-            password_hash,
-            success: true
-        }
-        // const result = await createUserAccountWithoutProfile(
-        //     {
-        //         id,
-        //         username,
-        //         email,
-        //         password_hash,
-        //         created_epoch,
-        //         updated_epoch
-        //     },
-        //     name
-        // )
+        // const result = {
+        //     ...data,
+        //     now,
+        //     hash,
+        //     id,
+        //     created_epoch,
+        //     updated_epoch,
+        //     password_hash,
+        //     success: true
+        // }
 
-        return { result }
+        const result = await createUserAccount(
+            {
+                ...data,
+                now,
+                hash,
+                id,
+                created_epoch,
+                updated_epoch,
+                password_hash,
+            }
+        )
+        console.log("User account creation result:", { result })
+
+
+        return { result: { success: true, ...result } }
 
     } catch (e: any) {
         console.error(e)
@@ -233,6 +236,82 @@ export async function checkSession(
     }
 }
 
+async function createUserAccount(params: any) {
+    const {
+        oauthRegistration,
+        // includePassword,
+        // firstname,
+        // lastname,
+        email,
+        // password,
+        // organizationId,
+        // now,
+        // hash,
+        id,
+        created_epoch,
+        updated_epoch,
+        password_hash,
+    } = params;
+
+    const email_verified = oauthRegistration ? 1 : 0;
+    const active_status = 1;
+    const last_login_epoch = 0;
+    const oauth = oauthRegistration ? 1 : 0;
+    const linked_google = oauthRegistration ? 1 : 0;
+
+    console.log("createUserAccount", { params })
+
+    // TODO: ADD-TRY_CATCH:
+    // Insert user account
+    const { changes, /* lastInsertRowid */ }
+        = sqlite.run(
+            `
+            INSERT 
+                INTO UserAccount (
+                    id, email, password_hash, email_verified, active_status,
+                    last_login_epoch, created_epoch, updated_epoch, oauth, linked_google
+                ) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                id,
+                email,
+                password_hash,
+                email_verified,
+                active_status,
+                last_login_epoch,
+                created_epoch,
+                updated_epoch,
+                oauth,
+                linked_google
+            ]
+        )
+
+    const isInsertSuccess = changes > 0
+
+    return { isInsertSuccess, changes }
+    
+    // const { isInsertSuccess: isInsertUserAccountSuccess } = 
+    //     await userModel.userAccount.insert(userAccountInput)
+    
+    // if (isInsertUserAccountSuccess) {
+    //     const userProfileInsertResult = 
+    //         await userModel.userProfile.insertBlank(
+    //             userAccountInput.id,
+    //             name,
+    //             userAccountInput.created_epoch,
+    //             userAccountInput.updated_epoch
+    //         );
+
+    //     const isInsertUserProfileSuccess = userProfileInsertResult?.isInsertSuccess || false;
+
+    //     return {
+    //         isInsertUserAccountSuccess,
+    //         isInsertUserProfileSuccess
+    //     }
+    // }
+
+    // return { isInsertUserAccountSuccess }
+}
 // async function createUserAccountWithoutProfile(
 //     userAccountInput: User.UserAccount.UserAccountInput,
 //     name: string
