@@ -407,7 +407,9 @@ export async function getUserAccount(
         'id',
         'email',
         'password_hash as secret',
-        'created_epoch'
+        'created_epoch',
+        'oauth',
+        'linked_google',
     ];
 
     const query = sqlite.query(

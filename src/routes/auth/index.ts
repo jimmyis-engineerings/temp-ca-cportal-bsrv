@@ -176,19 +176,32 @@ async function oAuthGoogleCallback(c: Context) {
         }
 
         // CASE #2: If the user exists, check to see if they have linked their account with the system.
-            // CASE #2.1 : User has not linked their account with the system yet.
-                // TODO: Send signal response to the user to link their account with the system. (Opt-in to link to an existing account)
-            // CASE #2.2 : User has linked their account with the system.
-                // TODO: Create a session for the user and return the session ID.
+        if (!existsUserAccount.linked_google) {
+        // CASE #2.1 : User has not linked their account with the system yet.
+            // TODO: Send signal response to the user to link their account with the system. (Opt-in to link to an existing account)
+            return c.json({
+                result: {
+                    success: true,
+                    tokens,
+                    userProfile, 
+                    signal: "ACCOUNT_EXISTS_LINKING_NEEDED", // Signal to the client that the account exists
+                }
+            })
+
+        } else {
+        // CASE #2.2 : User has linked their account with the system.
+            // TODO: Create a session for the user and return the session ID.
+            return c.json({
+                result: {
+                    success: true,
+                    tokens,
+                    userProfile, // TODO: Change user profile to the existing user profile in the system.
+                    signal: "LOGIN_SUCCESSFULLY", // Signal to the client that the account exists
+                }
+            })
+        }
 
 
-        return c.json({
-            result: {
-                success: true,
-                tokens,
-                userProfile,
-            }
-        }) 
     } catch (error: any) {
         console.log("Error during OAuth callback:", error);
         console.log("Error details:", {
