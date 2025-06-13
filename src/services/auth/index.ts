@@ -151,7 +151,7 @@ export async function signout(sessionId: string) {
     }
 }
 
-async function createUserSession(userId: string, deviceId: string) {
+export async function createUserSession(userId: string, deviceId: string) {
     // Generate a unique session ID based on user ID and device ID
     const hash = hashUtil.createSHA256Hash([userId, deviceId, new Date().getTime(), Math.random()]);
     const id = hash.substring(0, 16);

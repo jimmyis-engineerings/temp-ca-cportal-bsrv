@@ -191,10 +191,16 @@ async function oAuthGoogleCallback(c: Context) {
         } else {
         // CASE #2.2 : User has linked their account with the system.
             // TODO: Create a session for the user and return the session ID.
+            const sessionId = await authService.createUserSession(existsUserAccount.id, "0");
+
             return c.json({
                 result: {
                     success: true,
                     tokens,
+                    account: existsUserAccount,
+                    session: {
+                        id: sessionId
+                    },
                     userProfile, // TODO: Change user profile to the existing user profile in the system.
                     signal: "LOGIN_SUCCESSFULLY", // Signal to the client that the account exists
                 }
