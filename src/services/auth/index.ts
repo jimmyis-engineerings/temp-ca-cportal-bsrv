@@ -66,7 +66,9 @@ export async function signup(data: any) {
 
     } catch (e: any) {
         console.error(e)
-        console.error(e.code)
+        console.error(e.message)
+
+        return { success: false, error: e.message || "UNKNOWN_ERROR_CREATE_USER_ACCOUNT"  }
     }
 }
 
@@ -74,7 +76,6 @@ export async function signin(data: any) {
     try {
         const { user } = data
         const { email, password: rawPassword } = user
-        const username = email
         
         const now = new Date()   
         const latestSignin = now.getTime()
@@ -83,7 +84,7 @@ export async function signin(data: any) {
             return { success: false, error: { message: "Required inputs is missing" }}
         }
 
-        const userAccountData = await getUserAccount(username);
+        const userAccountData = await getUserAccount(email);
 
         if (!userAccountData) {
             return { success: false, error: { message: "User not found" }}
@@ -253,6 +254,12 @@ async function createUserAccount(params: any) {
         password_hash,
     } = params;
 
+    const isUserExists = await getUserAccount(email);
+
+    if (isUserExists) {
+        throw new Error("USER_ALREADY_EXISTS");
+    }
+
     const email_verified = oauthRegistration ? 1 : 0;
     const active_status = 1;
     const last_login_epoch = 0;
@@ -392,21 +399,20 @@ async function createUserAccount(params: any) {
 //         )
 // }
 export async function getUserAccount(
-    username: string
+    email: string
 ) {
     // const makeAlias = authUtil.makeAliasForUserAccountColumn;
 
     const requestFields = [
         'id',
-        'username',
-        'alias',
+        'email',
         'password_hash as secret',
         'created_epoch'
     ];
 
     const query = sqlite.query(
-        `SELECT ${requestFields.join(', ')} FROM UserAccount WHERE username = $username`
+        `SELECT ${requestFields.join(', ')} FROM UserAccount WHERE email = $email`
     );
 
-    return await query.get({ $username: username});
+    return await query.get({ $email: email});
 }
