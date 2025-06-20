@@ -16,7 +16,19 @@ const apiRoutes: { [key: string]: Hono } = {
 
 const api = new Hono()
   .use('/*', cors({
-    origin: ['https://portal-dev.cloud-ace.co.th', 'https://portal.cloud-ace.co.th', 'http://192.168.1.111:5173'],
+    origin: [
+      'https://portal-dev.cloud-ace.co.th',
+      'https://portal.cloud-ace.co.th',
+      'https://cloudace-portal-dev.jimmyis.com',
+      'https://cloudace-portal-admin.jimmyis.com',
+      'https://cloudace-portal-admin-dev.jimmyis.com',
+      'http://192.168.1.111:5173',
+      'http://192.168.1.111:5174',
+      'http://linux-hs-1:5173',
+      'http://linux-hs-1:5174',
+      'http://localhost:5173',
+      'http://localhost:5174',
+    ],
     allowHeaders: ['X-Custom-Header', 'Upgrade-Insecure-Requests'],
     allowMethods: ['POST', 'GET', 'OPTIONS'],
     exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
