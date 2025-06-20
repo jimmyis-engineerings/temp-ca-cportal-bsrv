@@ -87,6 +87,8 @@ async function oAuthGoogle(c: Context) {
 
     const redirect_uri = c.req.query('origin') + "/oauth/redirect" || googleOAuth2.redirectUri;
 
+    console.log("Redirect URI:", redirect_uri);
+
     // Generate a url that asks permissions for the Drive activity and Google Calendar scope
     const authorizationUrl = oauth2Client.generateAuthUrl({
         // 'online' (default) or 'offline' (gets refresh_token)
