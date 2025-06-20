@@ -136,6 +136,8 @@ async function oAuthGoogleCallback(c: Context) {
         // If any error occurs during the token exchange, it will be caught in the catch block.
 
         oauth2Client.setCredentials(tokens);
+
+        console.log("Tokens", tokens);
     
         const isRefreshTokenExists = tokens.refresh_token && tokens.refresh_token.length > 0;
         
