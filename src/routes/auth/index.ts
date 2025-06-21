@@ -9,10 +9,7 @@ import { oauthConfig } from '@/configs';
 
 const { googleOAuth2 } = oauthConfig;
 const oauth2ClientOptions = oauthConfig.googleOAuth2;
-const oauth2Client = new google.auth.OAuth2(
-    oauth2ClientOptions
-);
-
+let oauth2Client: any = {}
 
 export default new Hono()
   .get('/', get)
@@ -88,6 +85,12 @@ async function oAuthGoogle(c: Context) {
     const redirect_uri = c.req.query('origin') + "/oauth/redirect" || googleOAuth2.redirectUri;
 
     console.log("Redirect URI:", redirect_uri);
+
+    oauth2ClientOptions.redirectUri = redirect_uri;
+
+    oauth2Client = new google.auth.OAuth2(
+        oauth2ClientOptions
+    );
 
     // Generate a url that asks permissions for the Drive activity and Google Calendar scope
     const authorizationUrl = oauth2Client.generateAuthUrl({
