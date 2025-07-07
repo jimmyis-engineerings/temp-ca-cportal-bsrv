@@ -4,7 +4,7 @@ import crypto from 'crypto';
 
 import * as authService from '@/services/auth'
 
-import { authUtil, errorUtil } from '@/shared/utils';
+import { authUtil, httpUtil } from '@/shared/utils';
 import { oauthConfig } from '@/configs';
 
 const { googleOAuth2 } = oauthConfig;
@@ -16,7 +16,8 @@ export default new Hono()
   .post('/signup', signup)
   .post('/signin', signin)
   .get('/signout', signout)
-  .get('/session', session)
+  .get('/session', getSession)
+  .get('/session/check', checkSession)
   .get('/oauth/google', oAuthGoogle)
   .post('/oauth/google/callback', oAuthGoogleCallback)
 
@@ -58,7 +59,7 @@ async function signout(c: Context) {
         authUtil.extractSessionIdFromRequestHeader(c.req.header())
 	
     if (!sessionId) {
-        return c.json(errorUtil.responseErrorNoSessionHeader())
+        return c.json(httpUtil.responseErrorNoSessionHeader())
     }
 
     const result = await authService.signout(sessionId)
@@ -245,7 +246,7 @@ async function oAuthGoogleCallback(c: Context) {
 
 }
 
-async function session(c: Context) {
+async function getSession(c: Context) {
 	const sessionId = 
         authUtil.extractSessionIdFromRequestHeader(c.req.header())
 	const queries = 
@@ -256,7 +257,24 @@ async function session(c: Context) {
     console.log('Get session', { sessionId, queries, isFreshStart })
 
     if (!sessionId) {
-        return c.json(errorUtil.responseErrorNoSessionHeader())
+        return c.json(httpUtil.responseErrorNoSessionHeader())
+    }
+
+    const result = await authService.getSession(sessionId, isFreshStart)
+
+    return c.json({ result })
+}
+
+async function checkSession(c: Context) {
+	const sessionId = 
+        authUtil.extractSessionIdFromRequestHeader(c.req.header())
+	const queries = 
+        c.req.query()
+
+    const isFreshStart = "fresh_start" in queries;
+
+    if (!sessionId) {
+        return c.json(httpUtil.responseErrorNoSessionHeader())
     }
 
     const result = await authService.checkSession(sessionId, isFreshStart)

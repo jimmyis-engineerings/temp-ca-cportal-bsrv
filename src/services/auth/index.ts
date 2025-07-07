@@ -1,7 +1,7 @@
 // import { sqlite } from "@/shared/services/db/sqlite";
 import { sqlite } from "../../db/sqlite";
 
-import { hashUtil, errorUtil, jsonUtil } from '@/shared/utils'
+import { hashUtil, httpUtil, jsonUtil } from '@/shared/utils'
 import * as authUtil from './util'
 // import { userModel } from "@/model";
 // import { contentController, userController } from "@/controller";
@@ -9,6 +9,7 @@ import * as authUtil from './util'
 // TODO: Making this to be a dictionary config
 const USER_SESSION_TABLE = 'UserSession';
 const USER_OAUTH_TABLE = 'USER_OAUTH';
+const USER_ACCOUNT_TABLE = 'UserAccount';
 
 // TODO: CONFIG: Making this to be an permanenet secured config
 const SALT = "ABC"
@@ -274,27 +275,21 @@ export async function storeUserOAuthTokens(
 }
 
 
-export async function checkSession(
+export async function getSession(
     sessionId: string
 ) {
     try {
         const now = Math.floor(new Date().getTime() / 1000); // Current time in seconds
 
         if (!sessionId) {
-            console.error("Missing session ID in request");
-            
-            return errorUtil.responseErrorNoSessionHeader()
+            return httpUtil.responseErrorNoSessionHeader()
         }
 
-        console.log("Checking session ID:", sessionId);
-        
-        const result = await getSession(sessionId);
-
-        console.log({ result })
+        const result = await getSessionModel(sessionId);
 
         if (!result) {
             console.log("Session not found");
-            return errorUtil.responseErrorNoSessionFound();
+            return httpUtil.responseErrorNoSessionFound();
         }
 
         // Check if session is still valid based on creation time and retention period
@@ -305,10 +300,52 @@ export async function checkSession(
         if (now > expiresAt) {
             console.log("Session expired");
 
-            return errorUtil.responseErrorSessionExpired();
+            return httpUtil.responseErrorSessionExpired();
         }
 
-        return errorUtil.createSuccessResponse(result)
+        return httpUtil.createSuccessResponse(result)
+        
+    } catch (e: any) {
+        console.error("Error checking session:", e);
+        return { success: false, error: { message: e.message || "Unknown error" } };
+    }
+}
+
+export async function checkSession(
+    sessionId: string
+) {
+    try {
+        const now = Math.floor(new Date().getTime() / 1000); // Current time in seconds
+
+        if (!sessionId) {
+            console.error("Missing session ID in request");
+            
+            return httpUtil.responseErrorNoSessionHeader()
+        }
+
+        console.log("Checking session ID:", sessionId);
+        
+        const result = await checkSessionModel(sessionId);
+
+        console.log({ result })
+
+        if (!result) {
+            console.log("Session not found");
+            return httpUtil.responseErrorNoSessionFound();
+        }
+
+        // Check if session is still valid based on creation time and retention period
+        // const sessionCreatedAt = result.created_epoch;
+        // const expiresAt = result.expires_epoch;
+        const expiresAt = now + 7 * 24 * 60 * 60; // Example: 7 days from now
+        
+        if (now > expiresAt) {
+            console.log("Session expired");
+
+            return httpUtil.responseErrorSessionExpired();
+        }
+
+        return httpUtil.createSuccessResponse(result)
         
     } catch (e: any) {
         console.error("Error checking session:", e);
@@ -430,7 +467,7 @@ async function createUserAccount(params: any) {
 //     return await userModel.userSession.deleteById(sessionId)
 // }
 
-async function getSession(
+async function getSessionModel(
     sessionId: string
 ) {
     // TODO: Complete the try catch block
@@ -453,11 +490,25 @@ async function getSession(
                     'scope', ${USER_OAUTH_TABLE}.scope,
                     'created_epoch', ${USER_OAUTH_TABLE}.created_epoch,
                     'expires_epoch', ${USER_OAUTH_TABLE}.expires_epoch  
-                ) AS tokensJson
+                ) AS tokensJson,
+                
+                json_object(
+                    'id', ${USER_ACCOUNT_TABLE}.id,
+                    'email', ${USER_ACCOUNT_TABLE}.email,
+                    'email_verified', ${USER_ACCOUNT_TABLE}.email_verified,
+                    'active_status', ${USER_ACCOUNT_TABLE}.active_status,
+                    'last_login_epoch', ${USER_ACCOUNT_TABLE}.last_login_epoch,
+                    'created_epoch', ${USER_ACCOUNT_TABLE}.created_epoch,
+                    'updated_epoch', ${USER_ACCOUNT_TABLE}.updated_epoch,
+                    'oauth', ${USER_ACCOUNT_TABLE}.oauth,
+                    'linked_google', ${USER_ACCOUNT_TABLE}.linked_google  
+                ) AS accountJson
 
             FROM ${USER_SESSION_TABLE}
             JOIN ${USER_OAUTH_TABLE} 
                 ON ${USER_SESSION_TABLE}.id = ${USER_OAUTH_TABLE}.session_id
+            JOIN ${USER_ACCOUNT_TABLE} 
+                ON ${USER_ACCOUNT_TABLE}.id = ${USER_SESSION_TABLE}.user_id
             WHERE ${USER_SESSION_TABLE}.id = $sessionId
             ORDER BY ${USER_SESSION_TABLE}.created_epoch DESC
             LIMIT 1
@@ -465,6 +516,41 @@ async function getSession(
 
         const result = await query.get({ $sessionId: sessionId });
         console.log("getSession=>", { result }, { sessionId})
+        const session = jsonUtil.safeParseJson(result?.sessionJson);
+        const tokens = jsonUtil.safeParseJson(result?.tokensJson);
+        const account = jsonUtil.safeParseJson(result?.accountJson);
+
+        return { session, tokens, account };
+
+    } catch (e: any) {
+        console.error("Error getting session:", e);
+
+        throw new Error(e.message || "Unknown error while getting session");
+    }
+}
+
+async function checkSessionModel(
+    sessionId: string
+) {
+    // TODO: Complete the try catch block
+    try {
+        // TODO: Migrate to use userModel.userSession.getSession(sessionId)
+        const query = sqlite.query(
+            `SELECT 
+                json_object(
+                    'id', ${USER_SESSION_TABLE}.id,
+                    'created_epoch', ${USER_SESSION_TABLE}.created_epoch,
+                    'expires_epoch', ${USER_SESSION_TABLE}.expires_epoch,
+                    'last_active_epoch', ${USER_SESSION_TABLE}.last_active_epoch
+                ) AS sessionJson,
+
+            FROM ${USER_SESSION_TABLE}
+            WHERE ${USER_SESSION_TABLE}.id = $sessionId
+            ORDER BY ${USER_SESSION_TABLE}.created_epoch DESC
+            LIMIT 1
+        `);
+
+        const result = await query.get({ $sessionId: sessionId });
         const session = jsonUtil.safeParseJson(result?.sessionJson);
         const tokens = jsonUtil.safeParseJson(result?.tokensJson);
 
