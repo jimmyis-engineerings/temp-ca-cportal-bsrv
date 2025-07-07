@@ -2,16 +2,19 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import test from './test'
 import auth from './auth'
+import gcp from './gcp-resource'
 
 // TODO: Making this to be a configurable list
 const enabledRoutes: string[] = [
     "test",
-    "auth"
+    "auth",
+    "services/gcp"
 ]
 
 const apiRoutes: { [key: string]: Hono } = {
     test,
-    auth
+    auth,
+    ['services/gcp']: gcp
 }
 
 const api = new Hono()
@@ -35,7 +38,11 @@ const api = new Hono()
       'https://localhost:5173',
       'https://localhost:5174',
     ],
-    allowHeaders: ['X-Custom-Header', 'Upgrade-Insecure-Requests'],
+    allowHeaders: [
+      'X-Custom-Header',
+      'X-Session',
+      'Upgrade-Insecure-Requests'
+    ],
     allowMethods: ['POST', 'GET', 'OPTIONS'],
     exposeHeaders: ['Content-Length', 'X-Kuma-Revision'],
     maxAge: 600,
