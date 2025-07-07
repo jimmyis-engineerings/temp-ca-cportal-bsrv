@@ -1,10 +1,14 @@
 // import { sqlite } from "@/shared/services/db/sqlite";
 import { sqlite } from "../../db/sqlite";
 
-import { hashUtil, errorUtil } from '@/shared/utils'
+import { hashUtil, errorUtil, jsonUtil } from '@/shared/utils'
 import * as authUtil from './util'
 // import { userModel } from "@/model";
 // import { contentController, userController } from "@/controller";
+
+// TODO: Making this to be a dictionary config
+const USER_SESSION_TABLE = 'UserSession';
+const USER_OAUTH_TABLE = 'USER_OAUTH';
 
 // TODO: CONFIG: Making this to be an permanenet secured config
 const SALT = "ABC"
@@ -192,10 +196,86 @@ export async function createUserSession(userId: string, deviceId: string) {
     }
 }
 
+export async function storeUserOAuthTokens(
+    userId: string,
+    sessionId: string,
+    tokens: any
+) {
+
+    console.log("Storing user OAuth tokens:", { userId, sessionId, tokens });
+
+    if (!userId || !sessionId || !tokens) {
+        throw new Error("Missing required parameters: userId, sessionId, or tokens");
+    }
+    
+    const now = Math.floor(new Date().getTime() / 1000); // Current time in seconds
+    const provider = "google"; // TODO: Replace with actual provider, Remove hardcoded value
+    const access_token = tokens.access_token || null;
+    const refresh_token = tokens.refresh_token || null;
+    const expires_epoch = now + (tokens.expires_in || 3600); // Default to 1 hour if not provided
+    const id_token = tokens.id_token || null;
+    const scope = tokens.scope || null;
+    const token_type = tokens.token_type || "Bearer";
+    const id = hashUtil.createSHA256Hash([userId, provider]).substring(0, 16);
+
+    try {
+        console.log("Storing user oauth tokens");
+        
+        // Insert into USER_OAUTH table with the correct schema
+        const result = sqlite.run(
+            `INSERT 
+                INTO USER_OAUTH (
+                    id,
+                    user_id,
+                    session_id,
+                    provider,
+                    token_type,
+                    access_token,
+                    refresh_token,
+                    id_token,
+                    scope,
+                    created_epoch,
+                    expires_epoch
+                ) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+             ON CONFLICT(id) DO UPDATE SET 
+                created_epoch = excluded.created_epoch,
+                expires_epoch = excluded.expires_epoch,
+                session_id = excluded.session_id,
+                refresh_token = excluded.refresh_token,
+                access_token = excluded.access_token,
+                id_token = excluded.id_token,
+                scope = excluded.scope,
+                token_type = excluded.token_type
+
+             RETURNING *`,
+            [
+                id, userId, sessionId, provider, token_type,
+                access_token, refresh_token, id_token,
+                scope, now, expires_epoch
+            ]
+        );
+
+        console.log("OAuth tokens stored successfully:", { result });
+
+        const { changes } = result;
+
+        if (changes < 1) {
+            console.error("No changes made when creating session");
+            throw Error("Error creating session id");
+        }
+    
+        console.log("Session created successfully");
+        return id;
+    } catch (e) {
+        console.error("Error creating session:", e);
+        throw e; // Re-throw to handle in the calling function
+    }
+}
+
 
 export async function checkSession(
-    sessionId: string,
-    isFreshStart?: boolean
+    sessionId: string
 ) {
     try {
         const now = Math.floor(new Date().getTime() / 1000); // Current time in seconds
@@ -208,8 +288,7 @@ export async function checkSession(
 
         console.log("Checking session ID:", sessionId);
         
-        // const result = await getSession(sessionId, isFreshStart);
-        const result = {}
+        const result = await getSession(sessionId);
 
         console.log({ result })
 
@@ -351,24 +430,52 @@ async function createUserAccount(params: any) {
 //     return await userModel.userSession.deleteById(sessionId)
 // }
 
-// async function getSession(
-//     sessionId: string,
-//     isFreshStart?: boolean
-// ) {
-//     if (!isFreshStart) {
-//         const data = await userModel
-//             .userSession
-//             .getSessionData(sessionId);
-        
-//         return data;
-//     }
+async function getSession(
+    sessionId: string
+) {
+    // TODO: Complete the try catch block
+    try {
+        // TODO: Migrate to use userModel.userSession.getSession(sessionId)
+        const query = sqlite.query(
+            `SELECT 
+                json_object(
+                    'id', ${USER_SESSION_TABLE}.id,
+                    'created_epoch', ${USER_SESSION_TABLE}.created_epoch,
+                    'expires_epoch', ${USER_SESSION_TABLE}.expires_epoch,
+                    'last_active_epoch', ${USER_SESSION_TABLE}.last_active_epoch
+                ) AS sessionJson,
 
-//     const data = await userModel
-//         .userSession
-//         .getSessionWithFreshStartData(sessionId);
+                json_object(
+                    'provider', ${USER_OAUTH_TABLE}.provider,
+                    'token_type', ${USER_OAUTH_TABLE}.token_type,
+                    'access_token', ${USER_OAUTH_TABLE}.access_token,
+                    'id_token', ${USER_OAUTH_TABLE}.id_token,
+                    'scope', ${USER_OAUTH_TABLE}.scope,
+                    'created_epoch', ${USER_OAUTH_TABLE}.created_epoch,
+                    'expires_epoch', ${USER_OAUTH_TABLE}.expires_epoch  
+                ) AS tokensJson
 
-//     return data;
-// }
+            FROM ${USER_SESSION_TABLE}
+            JOIN ${USER_OAUTH_TABLE} 
+                ON ${USER_SESSION_TABLE}.id = ${USER_OAUTH_TABLE}.session_id
+            WHERE ${USER_SESSION_TABLE}.id = $sessionId
+            ORDER BY ${USER_SESSION_TABLE}.created_epoch DESC
+            LIMIT 1
+        `);
+
+        const result = await query.get({ $sessionId: sessionId });
+        console.log("getSession=>", { result }, { sessionId})
+        const session = jsonUtil.safeParseJson(result?.sessionJson);
+        const tokens = jsonUtil.safeParseJson(result?.tokensJson);
+
+        return { session, tokens };
+
+    } catch (e: any) {
+        console.error("Error getting session:", e);
+
+        throw new Error(e.message || "Unknown error while getting session");
+    }
+}
 
 // async function getUserAccount(
 //     username: User.UserAccount.USERNAME

@@ -1,9 +1,11 @@
-export function extractSessionFromRequestHeader(headers: any) {
-    const { authorization } = headers;
+export function extractSessionIdFromRequestHeader(headers: any) {
+    console.log(headers);
+    
+    const sessionId = headers['x-session'] || headers['X-Session'];
 
-    if (!authorization || !authorization.includes("Bearer")) {
+    if (!sessionId) {
         return undefined
     }
 
-	return authorization?.replace("Bearer ", "")
+	return sessionId
 }

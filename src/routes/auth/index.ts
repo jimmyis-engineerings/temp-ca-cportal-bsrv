@@ -55,7 +55,7 @@ async function signin(c: Context) {
 async function signout(c: Context) {
     // c.header('Content-Type', 'application/json');
 	const sessionId = 
-        authUtil.extractSessionFromRequestHeader(c.req.header())
+        authUtil.extractSessionIdFromRequestHeader(c.req.header())
 	
     if (!sessionId) {
         return c.json(errorUtil.responseErrorNoSessionHeader())
@@ -141,7 +141,7 @@ async function oAuthGoogleCallback(c: Context) {
         */
         // If any error occurs during the token exchange, it will be caught in the catch block.
 
-        oauth2Client.setCredentials(tokens);
+        // oauth2Client.setCredentials(tokens);
 
         console.log("Tokens", tokens);
     
@@ -203,17 +203,24 @@ async function oAuthGoogleCallback(c: Context) {
             // TODO: Create a session for the user and return the session ID.
             const sessionId = await authService.createUserSession(existsUserAccount.id, "0");
 
+            // Store user tokens to oauth binding with the user session.
+            await authService.storeUserOAuthTokens(existsUserAccount.id, sessionId, tokens);
+
+            const result = {
+                success: true,
+                tokens,
+                account: existsUserAccount,
+                session: {
+                    id: sessionId
+                },
+                userProfile, // TODO: Change user profile to the existing user profile in the system.
+                signal: "LOGIN_SUCCESSFULLY", // Signal to the client that the account exists
+            }
+
+            console.log("OAuth2 Login Success:", { result });
+
             return c.json({
-                result: {
-                    success: true,
-                    tokens,
-                    account: existsUserAccount,
-                    session: {
-                        id: sessionId
-                    },
-                    userProfile, // TODO: Change user profile to the existing user profile in the system.
-                    signal: "LOGIN_SUCCESSFULLY", // Signal to the client that the account exists
-                }
+                result
             })
         }
 
@@ -240,13 +247,13 @@ async function oAuthGoogleCallback(c: Context) {
 
 async function session(c: Context) {
 	const sessionId = 
-        authUtil.extractSessionFromRequestHeader(c.req.header())
+        authUtil.extractSessionIdFromRequestHeader(c.req.header())
 	const queries = 
         c.req.query()
 
     const isFreshStart = "fresh_start" in queries;
 
-    console.log({ sessionId, queries, isFreshStart })
+    console.log('Get session', { sessionId, queries, isFreshStart })
 
     if (!sessionId) {
         return c.json(errorUtil.responseErrorNoSessionHeader())
